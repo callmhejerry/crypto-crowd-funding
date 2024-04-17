@@ -56,13 +56,30 @@ contract CrowdFundingContractTest is Test {
         crowdFunding.contributeToCampaign{value: amountToContribute}(0);
 
         assertEq(address(crowdFunding).balance, amountToContribute);
+        assertEq(crowdFunding.getCampaignFundingBalance(0), amountToContribute);
         assertEq(crowdFunding.getAmountContributed(0), amountToContribute);
         
         vm.stopPrank();
     }
 
     function testRetrieveContribution() public createCampaign(CREATOR_1, BENEFICIARY_1) {
-        address 
+        uint256 amountToContribute = 3 ether;
+        uint256 initialCrowdFundingBalance = address(crowdFunding).balance;
+        vm.deal(contributor_1, 3 ether);
+        vm.startPrank(contributor_1);
+        crowdFunding.contributeToCampaign{value: 3 ether}(0);
+
+        assertEq(address(crowdFunding).balance, initialCrowdFundingBalance +  amountToContribute);
+        assertEq(crowdFunding.getAmountContributed(0), amountToContribute);
+
+        skip(1 days);
+        console.log("Campaign Status is: %d", uint(crowdFunding.getCampaignStatus(0)));
+        // console.log("Hi");
+
+        crowdFunding.retrieveContribution(0);
+        assertEq(address(crowdFunding).balance, initialCrowdFundingBalance);
+        assertEq(crowdFunding.getAmountContributed(0), 0);
+        assertEq(contributor_1.balance, amountToContribute);
     }
 
     modifier createCampaign(address creator, address beneficiary) {

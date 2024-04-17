@@ -101,7 +101,7 @@ contract CrowdFunding {
         Campaign storage campaign = s_idToCampaign[_campaignId];
         uint256 campaignStartTime = campaign.startTime;
         uint256 campaignEndTime = campaign.endTime;
-        bool isCampaignTargetReached = campaign.targetAmount >= campaign.fundingBalance;
+        bool isCampaignTargetReached = campaign.fundingBalance >= campaign.targetAmount;
 
         if (block.timestamp < campaignStartTime) {
             return CampaignStatus.INACTIVE;
@@ -175,4 +175,9 @@ contract CrowdFunding {
         Campaign storage campaign = s_idToCampaign[_campaignId];
         return campaign.contributors[msg.sender];
     }
+
+    function getCampaignFundingBalance(uint256 _campaignId) external view validateCampaignId(_campaignId) returns (uint){
+        Campaign storage campaign = s_idToCampaign[_campaignId];
+        return campaign.fundingBalance;
+     }
 }
