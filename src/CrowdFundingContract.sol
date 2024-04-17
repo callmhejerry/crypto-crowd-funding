@@ -10,16 +10,26 @@ contract CrowdFunding {
     }
 
     enum CampaignStatus {
-        INACTIVE,
-        ACTIVE,
-        SUCCESSFUL,
-        FAILED
+        INACTIVE, // A campaign that has not started
+        ACTIVE, // An ongoing campaign
+        SUCCESSFUL, // A campaign that has ended with the target Amount reached
+        FAILED // A campaign that has ended without reaching it's target amount
+
     }
     // EXPIRED,
     // REFUNDING,
     // COMPLETED
 
     mapping(uint256 => Campaign) s_idToCampaign;
+
+    ////////////
+    // EVENTS
+    ///////////
+    event CrowdFunding_CampaignCreation(
+        uint256 indexed id, address creator, address indexed beneficiary, uint256 indexed targetAmount
+    );
+
+    event CrowdFunding_CampaignContribution(address indexed contributor, uint256 indexed amountContributed);
 
     struct Campaign {
         uint256 id;
@@ -58,9 +68,15 @@ contract CrowdFunding {
         campaign.endTime = _startTime + _duration;
         campaign.description = _description;
 
+        emit CrowdFunding_CampaignCreation(s_totalCampaigns, msg.sender, _beneficiary, _targetAmount);
+
         s_totalCampaigns++;
     }
 
+    /// @notice Allows backers to make contributions to a campaign
+    /// @dev The campaign Id must be supplied to specify which campaign to contribute to,
+    /// this function receives ether from the contributors
+    /// @param _campaignId(uint256) campaign Id
     function contributeToCampaign(uint256 _campaignId) external payable {
         require(_campaignId < s_totalCampaigns, "CrowdFunding: Invalid campaignId");
         require(msg.value > 0, "CrowdFunding: Contribution should be more than 0");
@@ -73,8 +89,14 @@ contract CrowdFunding {
 
         campaign.fundingBalance += msg.value;
         campaign.contributors[msg.sender] += msg.value;
+
+        emit CrowdFunding_CampaignContribution(msg.sender, msg.value);
     }
 
+    /// @notice Gives the status of a specific campaign
+    /// @param _campaignId (uint256) the Id of the campaign
+    /// @return returns the campaign status of a campaign , this could be
+    /// ACTIVE, INACTIVE, SUCCESSFUL AND FAILED.
     function getCampaignStatus(uint256 _campaignId) public view returns (CampaignStatus) {
         Campaign storage campaign = s_idToCampaign[_campaignId];
         uint256 campaignStartTime = campaign.startTime;
@@ -91,6 +113,37 @@ contract CrowdFunding {
             return CampaignStatus.FAILED;
         }
     }
+
+    /// @notice This function is called by a backer/contributor to a campaign to retreieve contributed funds to a campaign if the campaign fails to meet it's target
+    /// @param _campaignId (uint256) the campaign Id
+    function retrieveContribution(uint256 _campaignId) external {
+        Campaign storage campaign = s_idToCampaign[_campaignId];
+
+        require(
+            campaign.contributors[msg.sender] > 0,
+            "CrowdFunding: Cannot retrieve contribution from a contribution you have not contributed to"
+        );
+
+        require(
+            getCampaignStatus(_campaignId) == CampaignStatus.FAILED,
+            "CrowdFunding: Can only refund contributions from a failed campaign"
+        );
+
+        uint256 amountToRefund = campaign.contributors[msg.sender];
+        campaign.contributors[msg.sender] -= amountToRefund;
+
+        (bool success,) = msg.sender.call{value: amountToRefund}("");
+        require(success, "CrowdFunding: Failed to refund contribution");
+    }
+
+    ////////////////////////
+    /// MODIFIERS
+    ////////////////////////
+    modifier validateCampaignId(uint256 _campaignId){
+        require(_campaignId < s_totalCampaigns);
+        _;
+    }
+
 
     ////////////////////////
     /// VIEW FUNCTIONS
@@ -116,5 +169,10 @@ contract CrowdFunding {
             campaign.creator,
             campaign.description
         );
+    }
+
+    function getAmountContributed(uint256 _campaignId) external view validateCampaignId(_campaignId)returns (uint256) {
+        Campaign storage campaign = s_idToCampaign[_campaignId];
+        return campaign.contributors[msg.sender];
     }
 }

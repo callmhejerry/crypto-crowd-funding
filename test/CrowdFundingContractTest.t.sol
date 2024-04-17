@@ -45,8 +45,23 @@ contract CrowdFundingContractTest is Test {
         assertEq(actualTargetAmount, targetAmount);
     }
 
+    function testContributeToCampaign() createCampaign(CREATOR_1, BENEFICIARY_1) public {
+        address contributor_1 = makeAddr("contributor_1");
+        uint256 amountToContribute = 3 ether;
+
+        vm.deal(contributor_1, 5 ether);
+        vm.startPrank(contributor_1);
+
+        crowdFunding.contributeToCampaign{value: amountToContribute}(0);
+
+        assertEq(address(crowdFunding).balance, amountToContribute);
+        assertEq(crowdFunding.getAmountContributed(0), amountToContribute);
+        
+        vm.stopPrank();
+    }
+
     modifier createCampaign(address creator, address beneficiary) {
-         vm.startPrank(creator);
+        vm.startPrank(creator);
 
         string memory description = "First Crowd funding";
         uint256 startTime = block.timestamp;
