@@ -9,6 +9,7 @@ contract CrowdFundingContractTest is Test {
     CrowdFunding crowdFunding;
     address CREATOR_1 = makeAddr("creator_1");
     address BENEFICIARY_1 = makeAddr("beneficiary_1");
+            address contributor_1 = makeAddr("contributor_1");
 
     function setUp() public {
         crowdFunding = new CrowdFunding();
@@ -46,7 +47,7 @@ contract CrowdFundingContractTest is Test {
     }
 
     function testContributeToCampaign() createCampaign(CREATOR_1, BENEFICIARY_1) public {
-        address contributor_1 = makeAddr("contributor_1");
+
         uint256 amountToContribute = 3 ether;
 
         vm.deal(contributor_1, 5 ether);
@@ -58,6 +59,10 @@ contract CrowdFundingContractTest is Test {
         assertEq(crowdFunding.getAmountContributed(0), amountToContribute);
         
         vm.stopPrank();
+    }
+
+    function testRetrieveContribution() public createCampaign(CREATOR_1, BENEFICIARY_1) {
+        address 
     }
 
     modifier createCampaign(address creator, address beneficiary) {
