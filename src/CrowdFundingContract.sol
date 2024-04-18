@@ -31,6 +31,8 @@ contract CrowdFunding {
 
     event CrowdFunding_CampaignContribution(address indexed contributor, uint256 indexed amountContributed);
 
+    event CrowdFunding_ClaimContributions(address indexed beneficiary, uint256 indexed claimedContributions);
+
     struct Campaign {
         uint256 id;
         uint256 startTime;
@@ -134,6 +136,21 @@ contract CrowdFunding {
 
         (bool success,) = msg.sender.call{value: amountToRefund}("");
         require(success, "CrowdFunding: Failed to refund contribution");
+    }
+
+    function claimFundsContributed(uint256 _campaignId)external {
+        Campaign storage campaign = s_idToCampaign[_campaignId];
+
+        require(campaign.beneficiary == msg.sender,"CrowdFunding: Only campaign beneficiary can claim contributed funds");
+        require(getCampaignStatus(_campaignId) == CampaignStatus.SUCCESSFUL, "CrowdFunding: Funds can only be claimed from successful campaign");
+
+        uint fundsToClaim = campaign.fundingBalance;
+        campaign.fundingBalance = 0;
+        (bool success, )  = campaign.beneficiary.call{value: fundsToClaim}("");
+
+        require(success, "CrowdFunding: Failed to send total contributed funds to beneficiary");
+
+        emit CrowdFunding_ClaimContributions(campaign.beneficiary, fundsToClaim);
     }
 
     ////////////////////////
