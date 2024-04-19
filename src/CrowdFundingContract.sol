@@ -2,8 +2,13 @@
 
 pragma solidity ^0.8.19;
 
+/// @title CrowdFunding
+/// @author 0xjerressy
+/// @notice This contract helps creators to create a crowd funding campaign
+/// to foster project developments
 contract CrowdFunding {
     uint256 private s_totalCampaigns;
+    mapping(uint256 => Campaign) s_idToCampaign;
 
     constructor() {
         s_totalCampaigns = 0;
@@ -14,13 +19,8 @@ contract CrowdFunding {
         ACTIVE, // An ongoing campaign
         SUCCESSFUL, // A campaign that has ended with the target Amount reached
         FAILED // A campaign that has ended without reaching it's target amount
-
     }
-    // EXPIRED,
-    // REFUNDING,
-    // COMPLETED
 
-    mapping(uint256 => Campaign) s_idToCampaign;
 
     ////////////
     // EVENTS
@@ -79,7 +79,7 @@ contract CrowdFunding {
     /// @dev The campaign Id must be supplied to specify which campaign to contribute to,
     /// this function receives ether from the contributors
     /// @param _campaignId(uint256) campaign Id
-    function contributeToCampaign(uint256 _campaignId) external payable {
+    function contributeToCampaign(uint256 _campaignId)validateCampaignId(_campaignId) external payable {
         require(_campaignId < s_totalCampaigns, "CrowdFunding: Invalid campaignId");
         require(msg.value > 0, "CrowdFunding: Contribution should be more than 0");
         require(
@@ -99,7 +99,7 @@ contract CrowdFunding {
     /// @param _campaignId (uint256) the Id of the campaign
     /// @return returns the campaign status of a campaign , this could be
     /// ACTIVE, INACTIVE, SUCCESSFUL AND FAILED.
-    function getCampaignStatus(uint256 _campaignId) public view returns (CampaignStatus) {
+    function getCampaignStatus(uint256 _campaignId)validateCampaignId(_campaignId) public view returns (CampaignStatus) {
         Campaign storage campaign = s_idToCampaign[_campaignId];
         uint256 campaignStartTime = campaign.startTime;
         uint256 campaignEndTime = campaign.endTime;
@@ -118,7 +118,7 @@ contract CrowdFunding {
 
     /// @notice This function is called by a backer/contributor to a campaign to retreieve contributed funds to a campaign if the campaign fails to meet it's target
     /// @param _campaignId (uint256) the campaign Id
-    function retrieveContribution(uint256 _campaignId) external {
+    function retrieveContribution(uint256 _campaignId)validateCampaignId(_campaignId) external {
         Campaign storage campaign = s_idToCampaign[_campaignId];
 
         require(
@@ -138,7 +138,12 @@ contract CrowdFunding {
         require(success, "CrowdFunding: Failed to refund contribution");
     }
 
-    function claimFundsContributed(uint256 _campaignId)external {
+    /// @notice This function allows the beneficiary of the campaign to claim
+    /// all contributed funds
+    /// @dev Beneficiary should only claim funds when the status of the campaign is
+    /// SUCCESSFUL
+    /// @param _campaignId (uint256) The Id of the campaign
+    function claimFundsContributed(uint256 _campaignId)validateCampaignId(_campaignId) external {
         Campaign storage campaign = s_idToCampaign[_campaignId];
 
         require(campaign.beneficiary == msg.sender,"CrowdFunding: Only campaign beneficiary can claim contributed funds");
